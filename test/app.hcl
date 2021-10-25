@@ -16,10 +16,10 @@ resource "server" "ui" {
   role       = "active"
   count      = 2
 
-  /*depends_on = [
+  depends_on = [
     database.db,
     nas.cache
-  ]*/
+  ]
 }
 
 

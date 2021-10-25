@@ -3,7 +3,7 @@ pattern_set_name = "Rehost"
 pattern "vmc_rehost" {
   description = "Move a host, as-is from on-prem to cloud using VMC"
   weight      = 99
-  target      = "Simple VMC host move + reip"
+  target      = "Simple VMC host move"
 
   rule {
     resource = "server"

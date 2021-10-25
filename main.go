@@ -53,8 +53,8 @@ func DecodeBody(body *hcl.BodyContent, resourceType string) ([]Resource, hcl.Dia
 func main() {
 
 	// need to get the command line parameters
-	patternsLibraryFile := flag.String("patternlib", "patterns.hcl", "Path to the file containing the list of patterns to use for matching.  Defaults to 'patterns.hcl'")
-	solutionDescriptor := flag.String("app", "app.hcl", "Path to the file containing the list of patterns to use for matching.  Defaults to 'app.hcl'")
+	patternsLibraryFile := flag.String("patternlib", "patterns.hcl", "Path to the file containing the list of patterns to use for matching.")
+	solutionDescriptor := flag.String("app", "app.hcl", "Path to the file containing the list of patterns to use for matching.")
 	solveMode := flag.String("solvefor", "priority", "What solution mode should we use.")
 	debugLog := flag.Bool("debug", false, "Should we log verbose messages for debugging?")
 	flag.Parse()
