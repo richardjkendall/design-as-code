@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
@@ -17,7 +18,6 @@ type Resource struct {
 }
 
 func DecodeBody(body *hcl.BodyContent, resourceType string) ([]Resource, hcl.Diagnostics) {
-	fmt.Println("Starting DecodeBody...")
 
 	var resources []Resource
 
@@ -55,20 +55,29 @@ func main() {
 	// need to get the command line parameters
 	patternsLibraryFile := flag.String("patternlib", "patterns.hcl", "Path to the file containing the list of patterns to use for matching.  Defaults to 'patterns.hcl'")
 	solutionDescriptor := flag.String("app", "app.hcl", "Path to the file containing the list of patterns to use for matching.  Defaults to 'app.hcl'")
-	solveMode := flag.String("mode", "priority", "What solution mode should we use.")
+	solveMode := flag.String("solvefor", "priority", "What solution mode should we use.")
+	debugLog := flag.Bool("debug", false, "Should we log verbose messages for debugging?")
 	flag.Parse()
 
-	fmt.Println("Running...")
-	fmt.Printf("Patterns library file:    %s\n", *patternsLibraryFile)
-	fmt.Printf("Solution descriptor file: %s\n", *solutionDescriptor)
+	if *debugLog {
+		log.SetLevel(log.DebugLevel)
+	}
 
-	fmt.Println("Loading patterns...")
+	log.Info("Running...")
+	log.WithFields(log.Fields{
+		"patternLibraryFile": *patternsLibraryFile,
+	}).Info("Patterns library file")
+	log.WithFields(log.Fields{
+		"solutionDescriptorFile": *solutionDescriptor,
+	}).Info("Solution descriptor file")
+
+	log.Info("Loading patterns...")
 	var patterns Patterns
 	patterns, err := LoadPatternLibrary(*patternsLibraryFile)
 	if err != nil {
-		log.Fatalf("Failed to load patterns: %s", err)
+		log.Fatal("Failed to load patterns: ", err)
 	}
-	fmt.Printf("Got %d patterns\n\n", len(patterns.PatternSet))
+	log.Info("Got ", len(patterns.PatternSet), " patterns")
 
 	p := hclparse.NewParser()
 
@@ -96,19 +105,31 @@ func main() {
 			wr.WriteDiagnostics(diagnostics)
 		}
 
-		fmt.Println("\nGot a set of resources...")
+		log.Info("Got ", len(resources), " resources")
 		for _, resource := range resources {
-			fmt.Printf("\tResource %s/%s\n", resource.resourceType, resource.resourceName)
+			log.WithFields(log.Fields{
+				"resourceType": resource.resourceType,
+				"resourceName": resource.resourceName,
+			}).Debug("Resource object")
 			for key, value := range resource.resourceAttributes {
-				fmt.Printf("\t\t-> %s = %s\n", key, value)
+				log.WithFields(log.Fields{
+					"resource": resource.resourceType + "/" + resource.resourceName,
+					"variable": key,
+					"value":    value,
+				}).Debug("Variable on resource")
 			}
 		}
 
-		fmt.Println("\nAttempting matches...")
+		log.Info("Doing intial pattern match")
 		matched, unmatched := MatchPatternsToSolution(resources, patterns.PatternSet)
-		fmt.Printf("\nMatched %d patterns & left %d umatched resources\n", len(matched), len(unmatched))
+		log.WithFields(log.Fields{
+			"matched":   len(matched),
+			"unmatched": len(unmatched),
+		}).Info("Matched patterns")
 
-		fmt.Println("\nRunning solver..., mode: ", *solveMode)
+		log.WithFields(log.Fields{
+			"solveMode": *solveMode,
+		}).Info("Running solver")
 		var solution []MatchedPattern
 		var unmatchedAfterSolution []string
 
@@ -118,18 +139,19 @@ func main() {
 		if *solveMode == "max" {
 			solution, unmatchedAfterSolution = SolvForMaxCoverage(matched, resources)
 		}
-		fmt.Printf("\nMatched %d patterns & left %d umatched resources\n", len(solution), len(unmatchedAfterSolution))
+		log.WithFields(log.Fields{
+			"matched":   len(solution),
+			"unmatched": len(unmatchedAfterSolution),
+		}).Info("Solver has run")
 
-		for _, mp := range solution {
-			fmt.Printf("\tPattern %s / %s\n", mp.Pattern.PatternName, mp.Pattern.Description)
-			for _, mr := range mp.Resources {
-				fmt.Printf("\t\t-> %s/%s\n", mr.resourceType, mr.resourceName)
-			}
-		}
+		fmt.Print("\nMatched patterns\n\n")
+		PrintTextPatternTable(solution)
 
-		fmt.Printf("\nUmatched resources:\n")
-		for _, un := range unmatchedAfterSolution {
-			fmt.Printf("\t%s\n", un)
+		if len(unmatchedAfterSolution) == 0 {
+			fmt.Print("\nNo unmatched resources.\n")
+		} else {
+			fmt.Print("\nUmatched resources:\n\n")
+			PrintTextResourceTable(unmatchedAfterSolution)
 		}
 
 	}

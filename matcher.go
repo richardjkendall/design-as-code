@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"sort"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type MatchedPattern struct {
@@ -107,7 +108,9 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 	}
 
 	for _, pattern := range patterns {
-		fmt.Printf("Attempting to match pattern: %s\n", pattern.PatternName)
+		log.WithFields(log.Fields{
+			"pattern": pattern.PatternName,
+		}).Debug("Attempting to match pattern")
 
 		var mp MatchedPattern
 		var mr []Resource
@@ -116,7 +119,10 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 		matchingRules := 0
 
 		for _, rule := range pattern.Rules {
-			fmt.Printf("\tWorking on rule for resource: %s\n", rule.Resource)
+			log.WithFields(log.Fields{
+				"pattern":  pattern.PatternName,
+				"resource": rule.Resource,
+			}).Debug("Working on rule for resource")
 			matchingResources := 0
 
 			for _, resource := range resources {
@@ -127,7 +133,13 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 
 					// run through the conditions
 					for _, condition := range rule.Conditions {
-						fmt.Printf("\t\tChecking %s %s %s\n", condition.Attribute, condition.Operator, condition.Value)
+						log.WithFields(log.Fields{
+							"pattern":   pattern.PatternName,
+							"resource":  rule.Resource,
+							"attribute": condition.Attribute,
+							"operator":  condition.Operator,
+							"value":     condition.Value,
+						}).Debug("Checking condition")
 
 						// does the the resource have the attributes the rule expects?
 						_, present := resource.resourceAttributes[condition.Attribute]
@@ -142,7 +154,6 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 								// check for equality
 								if actualValue == expectedValue {
 									match = SetTrueIfNotFalse(match)
-									fmt.Printf("\t\t\tGot a match\n")
 								} else {
 									match = false
 								}
@@ -150,7 +161,6 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 								// check for less than
 								if actualValue < expectedValue {
 									match = SetTrueIfNotFalse(match)
-									fmt.Printf("\t\t\tGot a match\n")
 								} else {
 									match = false
 								}
@@ -158,7 +168,6 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 								// check for greater than
 								if actualValue > expectedValue {
 									match = SetTrueIfNotFalse(match)
-									fmt.Printf("\t\t\tGot a match\n")
 								} else {
 									match = false
 								}
@@ -194,7 +203,9 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 
 		// check to see if all the rules this pattern has were matched, if not all matched then this is a fail
 		if matchingRules == len(pattern.Rules) {
-			fmt.Printf("All rules for pattern %s matched\n", pattern.PatternName)
+			log.WithFields(log.Fields{
+				"pattern": pattern.PatternName,
+			}).Debug("All rules for pattern matched")
 			mp.Resources = mr
 			matched = append(matched, mp)
 		}
