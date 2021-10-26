@@ -11,45 +11,6 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 )
 
-type Resource struct {
-	resourceType       string
-	resourceName       string
-	resourceAttributes map[string]string
-}
-
-func DecodeBody(body *hcl.BodyContent, resourceType string) ([]Resource, hcl.Diagnostics) {
-
-	var resources []Resource
-
-	ctx := &hcl.EvalContext{}
-	for _, block := range body.Blocks.OfType("resource") {
-		resourceType := block.Labels[0]
-
-		var resource Resource
-		attributes := make(map[string]string)
-
-		resource.resourceName = block.Labels[1]
-		resource.resourceType = resourceType
-
-		schema := schemaMap[resourceType]
-		contents, diagnostics := block.Body.Content(&schema)
-		if diagnostics != nil && diagnostics.HasErrors() {
-			return nil, diagnostics
-		}
-
-		for _, attribute := range contents.Attributes {
-			val, _ := attribute.Expr.Value(ctx)
-			attributes[attribute.Name] = convertValueToString(val)
-		}
-
-		resource.resourceAttributes = attributes
-
-		resources = append(resources, resource)
-	}
-
-	return resources, nil
-}
-
 func main() {
 
 	// need to get the command line parameters
@@ -71,13 +32,23 @@ func main() {
 		"solutionDescriptorFile": *solutionDescriptor,
 	}).Info("Solution descriptor file")
 
+	log.Info("Loading solution schema...")
+	schemas := make(map[string]hcl.BodySchema)
+	typemap := make(map[string]map[string]string)
+	schemareaderr := ReadSchema(schemas, typemap)
+	if schemareaderr != nil {
+		log.WithError(schemareaderr).Fatal("Cannot continue")
+	}
+
 	log.Info("Loading patterns...")
 	var patterns Patterns
 	patterns, err := LoadPatternLibrary(*patternsLibraryFile)
 	if err != nil {
 		log.Fatal("Failed to load patterns: ", err)
 	}
-	log.Info("Got ", len(patterns.PatternSet), " patterns")
+	log.WithFields(log.Fields{
+		"count": len(patterns.PatternSet),
+	}).Info("Loaded pattern library")
 
 	p := hclparse.NewParser()
 
@@ -100,12 +71,17 @@ func main() {
 		}
 
 		// call descent parser from here
-		resources, diagnostics := DecodeBody(contents, "")
+		resources, diagnostics := DecodeBody(contents, "", schemas)
 		if diagnostics != nil && diagnostics.HasErrors() {
 			wr.WriteDiagnostics(diagnostics)
+			log.Fatal("Unrecoverable error")
+			os.Exit(1)
 		}
 
-		log.Info("Got ", len(resources), " resources")
+		log.WithFields(log.Fields{
+			"count": len(resources),
+		}).Info("Solution loaded")
+
 		for _, resource := range resources {
 			log.WithFields(log.Fields{
 				"resourceType": resource.resourceType,

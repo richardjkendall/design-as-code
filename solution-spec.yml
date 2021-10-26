@@ -1,0 +1,37 @@
+load_balancer:
+  protocol: string
+
+server:
+  os: string
+  virtual: bool
+  hypervisor: string
+  arch: string
+  cores: int
+  memory: int
+  role: string
+  count: int
+  software: block
+
+nas:
+  type: string
+
+database:
+  type: string
+  platform: string
+  arch: string
+  virtual: bool
+  ha: bool
+  role: string
+  sla: block
+
+sla:
+  availability: string
+  rto: string
+  rpo: string
+
+software:
+  vendor: string
+  product: string
+  version: string
+
+  

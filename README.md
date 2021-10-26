@@ -4,7 +4,7 @@ A tool to express application designs as code and match those designs to pattern
 This is work-in-progress, and there is lots still [to-do](#to-do)
 
 ## How it works
-This tool allows you to define your application design as code similar to Terraform.  It uses the HCL language, but defines some new constructs:
+This tool allows you to define your application design as code similar to Terraform.  It uses the HCL language, and has a configurable schema, but it comes with some pre-created constructs including:
 
 * load_balancer
 * server
@@ -16,6 +16,31 @@ It is designed to bridge the gap between traditional design documentation and a 
 It is often the case that IT teams need to find all their applications with particular characteristics - especially to service needs like migration projects, where the migration paths are dependent on the characteristics of the applications.
 
 This language is designed to capture those semantics, so that application solutions can be managed as code, and queried and matched based on rules.  The pattern rules are also captured as HCL and can be loaded and used by the design-as-code tool.
+
+## Changing the schema
+As mentioned above, the schemas used to describe the resources are configurable.  You can change the `solution-spec.yml` file to change these schemas.
+
+Here's an example:
+
+```yml
+database:
+  type: string
+  platform: string
+  arch: string
+  virtual: bool
+  ha: bool
+  role: string
+  sla: block
+
+sla:
+  availability: string
+  rto: string
+  rpo: string
+```
+
+Each top-level item becomes a 'block' in the expected HCL file, with the attributes defined under it - these attributes are all optional in the resulting HCL schema spec.  Blocks can be nested, and you can see an example of this here with `database` containing `sla`.
+
+The `depends_on` attribute, which is used to specify topological relationships between items will be automatically added to each block, this does not need to be specified.  The schema parsing will fail if `depends_on` is specified as an attribute.
 
 ## Example
 
@@ -150,8 +175,7 @@ There is still much to do, current goals:
 
 1. Introduce a structured output e.g. JSON as well as the tabular output
 2. Extend the rule language to include complex conditionals and additional operators
-3. Make the solution (application) schema configurable
-4. Support rules which use solution topology (e.g. if this is linked to that then...)
+3. Support rules which use solution topology (e.g. if this is linked to that then...)
 
 
 

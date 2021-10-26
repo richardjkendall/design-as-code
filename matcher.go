@@ -52,6 +52,7 @@ func SolveForPriority(matches []MatchedPattern, resources []Resource) (solution 
 	return
 }
 
+// TODO: need to solve for using the most specific matches first (in both solvers)
 func SolvForMaxCoverage(matches []MatchedPattern, resources []Resource) (solution []MatchedPattern, unmatched []string) {
 
 	// create a map to track which resources have been used

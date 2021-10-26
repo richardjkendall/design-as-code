@@ -1,9 +1,9 @@
-solution_name = "Richard's test app"
-apm_number    = "APM00001"
+solution_name    = "Richard's test app"
+solution_number  = "APM00001"
 
 resource "load_balancer" "lb" {
   protocol = "HTTPS"
-  backends = "server.ui"
+  depends_on = [ server.ui ]
 }
 
 resource "server" "ui" {
