@@ -42,6 +42,15 @@ Each top-level item becomes a 'block' in the expected HCL file, with the attribu
 
 The `depends_on` attribute, which is used to specify topological relationships between items will be automatically added to each block, this does not need to be specified.  The schema parsing will fail if `depends_on` is specified as an attribute.
 
+### Attribute types:
+
+The following attribute types are supported:
+
+* string
+* bool
+* int
+* block (where block means a nested block, which should be specified in the spec)
+
 ## Example
 
 This is a simple 2-tier app, with a UI tier and a backend database:
