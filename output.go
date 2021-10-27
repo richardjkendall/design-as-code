@@ -6,6 +6,22 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+func DebugPrintPatternTable(matched []MatchedPattern) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"#", "Pattern", "Resource Count", "Weight", "Condition Count"})
+	for i, pattern := range matched {
+		t.AppendRow(table.Row{
+			i,
+			pattern.Pattern.PatternName,
+			len(pattern.Resources),
+			pattern.Pattern.Weight,
+			pattern.ConditionCount,
+		})
+	}
+	t.Render()
+}
+
 func PrintTextPatternTable(matched []MatchedPattern) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
@@ -13,7 +29,7 @@ func PrintTextPatternTable(matched []MatchedPattern) {
 	for i, pattern := range matched {
 		var resources = ""
 		for _, resource := range pattern.Resources {
-			resources = resource.resourceType + "/" + resource.resourceName + ", "
+			resources = resources + resource.resourceType + "/" + resource.resourceName + ", "
 		}
 		t.AppendRow(table.Row{
 			i,

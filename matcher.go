@@ -1,14 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type MatchedPattern struct {
-	Pattern   Pattern
-	Resources []Resource
+	Pattern        Pattern
+	ConditionCount int
+	Resources      []Resource
 }
 
 func SolveForPriority(matches []MatchedPattern, resources []Resource) (solution []MatchedPattern, unmatched []string) {
@@ -19,10 +21,28 @@ func SolveForPriority(matches []MatchedPattern, resources []Resource) (solution 
 		matchMap[resource.resourceType+"/"+resource.resourceName] = false
 	}
 
+	if log.GetLevel() == log.DebugLevel {
+		fmt.Println("\nMatched patterns before sorting:")
+		DebugPrintPatternTable(matches)
+	}
+
+	// sort by specificity fist
+	// biggest to smallest
+	sort.SliceStable(matches, func(i, j int) bool {
+		return matches[i].ConditionCount > matches[j].ConditionCount
+	})
+
 	// sort by weight
-	sort.Slice(matches, func(i, j int) bool {
+	// smallest to biggest
+	sort.SliceStable(matches, func(i, j int) bool {
 		return matches[i].Pattern.Weight < matches[j].Pattern.Weight
 	})
+
+	if log.GetLevel() == log.DebugLevel {
+		fmt.Println("\nMatched patterns after sorting:")
+		DebugPrintPatternTable(matches)
+		fmt.Println("")
+	}
 
 	// got through the matches and select them till they are run out or we have covered all the resources
 	for _, mp := range matches {
@@ -61,10 +81,27 @@ func SolvForMaxCoverage(matches []MatchedPattern, resources []Resource) (solutio
 		matchMap[resource.resourceType+"/"+resource.resourceName] = false
 	}
 
+	if log.GetLevel() == log.DebugLevel {
+		fmt.Println("\nMatched patterns before sorting:")
+		DebugPrintPatternTable(matches)
+	}
+
+	// sort by specificity fist
+	// biggest to smallest
+	sort.SliceStable(matches, func(i, j int) bool {
+		return matches[i].ConditionCount > matches[j].ConditionCount
+	})
+
 	// sort by number of resources per pattern
 	sort.Slice(matches, func(i, j int) bool {
 		return len(matches[i].Resources) > len(matches[j].Resources)
 	})
+
+	if log.GetLevel() == log.DebugLevel {
+		fmt.Println("\nMatched patterns after sorting:")
+		DebugPrintPatternTable(matches)
+		fmt.Println("")
+	}
 
 	// got through the matches and select them till they are run out or we have covered all the resources
 	for _, mp := range matches {
@@ -118,6 +155,7 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 
 		mp.Pattern = pattern
 		matchingRules := 0
+		conditionCount := 0
 
 		for _, rule := range pattern.Rules {
 			log.WithFields(log.Fields{
@@ -150,11 +188,13 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 							actualValue := resource.resourceAttributes[condition.Attribute]
 
 							// check if the actual value matches the current value using the operator specified by the rule
+							// TODO: use schema typemap to use the operators with proper type casting
 							switch condition.Operator {
 							case "eq":
 								// check for equality
 								if actualValue == expectedValue {
 									match = SetTrueIfNotFalse(match)
+									conditionCount = conditionCount + 1
 								} else {
 									match = false
 								}
@@ -162,6 +202,7 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 								// check for less than
 								if actualValue < expectedValue {
 									match = SetTrueIfNotFalse(match)
+									conditionCount = conditionCount + 1
 								} else {
 									match = false
 								}
@@ -169,6 +210,7 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 								// check for greater than
 								if actualValue > expectedValue {
 									match = SetTrueIfNotFalse(match)
+									conditionCount = conditionCount + 1
 								} else {
 									match = false
 								}
@@ -208,6 +250,7 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 				"pattern": pattern.PatternName,
 			}).Debug("All rules for pattern matched")
 			mp.Resources = mr
+			mp.ConditionCount = conditionCount
 			matched = append(matched, mp)
 		}
 
