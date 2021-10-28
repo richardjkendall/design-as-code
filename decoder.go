@@ -1,23 +1,104 @@
 package main
 
-import "github.com/hashicorp/hcl/v2"
+import (
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/zclconf/go-cty/cty"
+
+	log "github.com/sirupsen/logrus"
+)
 
 type Resource struct {
 	resourceType       string
 	resourceName       string
-	resourceAttributes map[string]string
+	resourceAttributes map[string]interface{}
 }
 
-func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]hcl.BodySchema) ([]Resource, hcl.Diagnostics) {
+func ExpressionToValue(expr hcl.Expression, ctx *hcl.EvalContext, variableName string, schema map[string]string) (interface{}, hcl.Diagnostics) {
+	log.WithFields(log.Fields{
+		"variableName": variableName,
+		"variableType": schema[variableName],
+	}).Trace("Expression to value conversion starting")
+
+	// if this is a depends_on, we need to handle it seperately
+	if variableName == "depends_on" {
+		log.Trace("This is depends_on, so a list of strings")
+		var out []string
+		diag := gohcl.DecodeExpression(expr, ctx, &out)
+		if diag != nil && diag.HasErrors() {
+			return nil, diag
+		}
+		log.WithFields(log.Fields{
+			"variableName": variableName,
+			"value":        out,
+		}).Trace("Got a list of strings")
+		return out, nil
+	}
+
+	switch schema[variableName] {
+	case "string":
+		var out string
+		diag := gohcl.DecodeExpression(expr, ctx, &out)
+		if diag != nil && diag.HasErrors() {
+			return nil, diag
+		}
+		log.WithFields(log.Fields{
+			"variableName": variableName,
+			"value":        out,
+		}).Trace("Got a string")
+		return out, nil
+	case "bool":
+		var out bool
+		diag := gohcl.DecodeExpression(expr, ctx, &out)
+		if diag != nil && diag.HasErrors() {
+			return nil, diag
+		}
+		log.WithFields(log.Fields{
+			"variableName": variableName,
+			"value":        out,
+		}).Trace("Got a bool")
+		return out, nil
+	case "int":
+		var out int
+		diag := gohcl.DecodeExpression(expr, ctx, &out)
+		if diag != nil && diag.HasErrors() {
+			return nil, diag
+		}
+		log.WithFields(log.Fields{
+			"variableName": variableName,
+			"value":        out,
+		}).Trace("Got an int")
+		return out, nil
+	default:
+		log.WithFields(log.Fields{
+			"variableName": variableName,
+		}).Trace("Got no value")
+		return nil, nil
+	}
+}
+
+func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]hcl.BodySchema, typemap map[string]map[string]string) ([]Resource, hcl.Diagnostics) {
 
 	var resources []Resource
 
-	ctx := &hcl.EvalContext{}
+	ctx := &hcl.EvalContext{
+		Variables: map[string]cty.Value{
+			"server": cty.ObjectVal(map[string]cty.Value{
+				"ui": cty.StringVal("test"),
+			}),
+			"nas": cty.ObjectVal(map[string]cty.Value{
+				"cache": cty.StringVal("test"),
+			}),
+			"database": cty.ObjectVal(map[string]cty.Value{
+				"db": cty.StringVal("test"),
+			}),
+		},
+	}
 	for _, block := range body.Blocks.OfType("resource") {
 		resourceType := block.Labels[0]
 
 		var resource Resource
-		attributes := make(map[string]string)
+		attributes := make(map[string]interface{})
 
 		resource.resourceName = block.Labels[1]
 		resource.resourceType = resourceType
@@ -29,8 +110,25 @@ func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]h
 		}
 
 		for _, attribute := range contents.Attributes {
-			val, _ := attribute.Expr.Value(ctx)
-			attributes[attribute.Name] = convertValueToString(val)
+			//val, _ := attribute.Expr.Value(ctx)
+			//fmt.Printf("%#v", attribute.Expr)
+
+			/*var out []string
+			diag := gohcl.DecodeExpression(attribute.Expr, ctx, &out)
+			if diag != nil && diag.HasErrors() {
+				return nil, diag
+			}*/
+			//fmt.Printf("Expression = %#v", out)
+
+			val, diag := ExpressionToValue(attribute.Expr, ctx, attribute.Name, typemap[resourceType])
+			if diag != nil && diag.HasErrors() {
+				return nil, diag
+			}
+			log.WithFields(log.Fields{
+				"value": val,
+			}).Trace("Got a value back from ExpressionToValue")
+
+			attributes[attribute.Name] = val
 		}
 
 		resource.resourceAttributes = attributes

@@ -3,7 +3,7 @@ solution_number  = "APM00001"
 
 resource "load_balancer" "lb" {
   protocol = "HTTPS"
-  depends_on = [ server.ui ]
+  depends_on = [ server.ui ] 
 }
 
 resource "server" "ui" {
@@ -16,9 +16,9 @@ resource "server" "ui" {
   role       = "active"
   count      = 2
 
-  depends_on = [
-    database.db,
-    nas.cache
+  depends_on = [ 
+    database.db, 
+    nas.cache 
   ]
 }
 

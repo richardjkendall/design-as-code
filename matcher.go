@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +22,7 @@ func SolveForPriority(matches []MatchedPattern, resources []Resource) (solution 
 		matchMap[resource.resourceType+"/"+resource.resourceName] = false
 	}
 
-	if log.GetLevel() == log.DebugLevel {
+	if log.GetLevel() >= log.DebugLevel {
 		fmt.Println("\nMatched patterns before sorting:")
 		DebugPrintPatternTable(matches)
 	}
@@ -38,7 +39,7 @@ func SolveForPriority(matches []MatchedPattern, resources []Resource) (solution 
 		return matches[i].Pattern.Weight < matches[j].Pattern.Weight
 	})
 
-	if log.GetLevel() == log.DebugLevel {
+	if log.GetLevel() >= log.DebugLevel {
 		fmt.Println("\nMatched patterns after sorting:")
 		DebugPrintPatternTable(matches)
 		fmt.Println("")
@@ -81,7 +82,7 @@ func SolvForMaxCoverage(matches []MatchedPattern, resources []Resource) (solutio
 		matchMap[resource.resourceType+"/"+resource.resourceName] = false
 	}
 
-	if log.GetLevel() == log.DebugLevel {
+	if log.GetLevel() >= log.DebugLevel {
 		fmt.Println("\nMatched patterns before sorting:")
 		DebugPrintPatternTable(matches)
 	}
@@ -97,7 +98,7 @@ func SolvForMaxCoverage(matches []MatchedPattern, resources []Resource) (solutio
 		return len(matches[i].Resources) > len(matches[j].Resources)
 	})
 
-	if log.GetLevel() == log.DebugLevel {
+	if log.GetLevel() >= log.DebugLevel {
 		fmt.Println("\nMatched patterns after sorting:")
 		DebugPrintPatternTable(matches)
 		fmt.Println("")
@@ -138,7 +139,55 @@ func SetTrueIfNotFalse(in bool) bool {
 	return false
 }
 
-func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched []MatchedPattern, unmatched []string) {
+func CheckRelation(actualValue interface{}, expectedValue string, operator string, expectedType string) bool {
+	log.WithFields(log.Fields{
+		"actual":   actualValue,
+		"expected": expectedValue,
+		"type":     expectedType,
+		"operator": operator,
+	}).Trace("Starting check relation")
+	switch expectedType {
+	case "string":
+		actual := actualValue.(string)
+		switch operator {
+		case "eq":
+			return actual == expectedValue
+		case "lt":
+			return actual < expectedValue
+		case "gt":
+			return actual > expectedValue
+		default:
+			log.Trace("No valid operator provided")
+			return false
+		}
+	case "bool":
+		actual := actualValue.(bool)
+		expected := expectedValue == "true"
+		return actual == expected
+	case "int":
+		actual := actualValue.(int)
+		expected, err := strconv.Atoi(expectedValue)
+		if err != nil {
+			log.WithError(err).Error("Failed to convert string to integer")
+			return false
+		}
+		switch operator {
+		case "eq":
+			return actual == expected
+		case "lt":
+			return actual < expected
+		case "gt":
+			return actual > expected
+		default:
+			log.Trace("No valid operator provided")
+			return false
+		}
+	}
+	log.Trace("No valid type provided")
+	return false
+}
+
+func MatchPatternsToSolution(resources []Resource, patterns []Pattern, typemap map[string]map[string]string) (matched []MatchedPattern, unmatched []string) {
 
 	matchMap := make(map[string]bool)
 	for _, resource := range resources {
@@ -173,11 +222,12 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 					// run through the conditions
 					for _, condition := range rule.Conditions {
 						log.WithFields(log.Fields{
-							"pattern":   pattern.PatternName,
-							"resource":  rule.Resource,
-							"attribute": condition.Attribute,
-							"operator":  condition.Operator,
-							"value":     condition.Value,
+							"pattern":       pattern.PatternName,
+							"resource":      rule.Resource,
+							"attribute":     condition.Attribute,
+							"attributeType": typemap[resource.resourceType][condition.Attribute],
+							"operator":      condition.Operator,
+							"value":         condition.Value,
 						}).Debug("Checking condition")
 
 						// does the the resource have the attributes the rule expects?
@@ -188,36 +238,18 @@ func MatchPatternsToSolution(resources []Resource, patterns []Pattern) (matched 
 							actualValue := resource.resourceAttributes[condition.Attribute]
 
 							// check if the actual value matches the current value using the operator specified by the rule
-							// TODO: use schema typemap to use the operators with proper type casting
-							switch condition.Operator {
-							case "eq":
-								// check for equality
-								if actualValue == expectedValue {
-									match = SetTrueIfNotFalse(match)
-									conditionCount = conditionCount + 1
-								} else {
-									match = false
-								}
-							case "lt":
-								// check for less than
-								if actualValue < expectedValue {
-									match = SetTrueIfNotFalse(match)
-									conditionCount = conditionCount + 1
-								} else {
-									match = false
-								}
-							case "gt":
-								// check for greater than
-								if actualValue > expectedValue {
-									match = SetTrueIfNotFalse(match)
-									conditionCount = conditionCount + 1
-								} else {
-									match = false
-								}
-							// TODO: implement gte, lte, ne
-							default:
+							// TODO: implement additional operators: gte, lte, link
+
+							expectedType := typemap[resource.resourceType][condition.Attribute]
+							if CheckRelation(actualValue, expectedValue, condition.Operator, expectedType) {
+								log.Trace("Back from check relation with a +ve match")
+								match = SetTrueIfNotFalse(match)
+								conditionCount = conditionCount + 1
+							} else {
+								log.Trace("Back from check relation with a -ve match")
 								match = false
 							}
+
 						} else {
 							// attribute is not present for this resource, so this is an automatic no match
 							match = false

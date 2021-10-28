@@ -6,11 +6,16 @@ import (
 
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // convertValueToString recurses through cty.Value structures and converts them to a string representation
 func convertValueToString(val cty.Value) string {
-	//fmt.Printf("\t\t-> type: %s\n", val.Type().FriendlyName())
+	log.WithFields(log.Fields{
+		"fieldType": val.Type().FriendlyName(),
+	}).Trace("convertValueToString")
+
 	// for basic types we can return the string representation right away
 	if val.Type() == cty.String {
 		return val.AsString()
@@ -21,6 +26,7 @@ func convertValueToString(val cty.Value) string {
 	if val.Type() == cty.Bool {
 		return boolToString(val)
 	}
+
 	// for tuples (which seems to include lists) we need to iterate
 	if val.Type().IsTupleType() {
 		var ret []string
@@ -46,8 +52,13 @@ func convertValueToString(val cty.Value) string {
 		}
 		return "{" + strings.Join(ret, ", ") + "}"
 	}
-	// if we get here we have an issue
 
+	if val.Type().HasDynamicTypes() {
+		log.Trace("Field has dyanmic types")
+
+	}
+
+	// if we get here we have an issue
 	return "ERROR: cannot convert!"
 }
 

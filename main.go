@@ -18,10 +18,15 @@ func main() {
 	solutionDescriptor := flag.String("app", "app.hcl", "Path to the file containing the list of patterns to use for matching.")
 	solveMode := flag.String("solvefor", "priority", "What solution mode should we use.")
 	debugLog := flag.Bool("debug", false, "Should we log verbose messages for debugging?")
+	traceLog := flag.Bool("trace", false, "Should we log verbose messages for debugging?")
 	flag.Parse()
 
 	if *debugLog {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	if *traceLog {
+		log.SetLevel(log.TraceLevel)
 	}
 
 	log.Info("Running...")
@@ -71,7 +76,7 @@ func main() {
 		}
 
 		// call descent parser from here
-		resources, diagnostics := DecodeBody(contents, "", schemas)
+		resources, diagnostics := DecodeBody(contents, "", schemas, typemap)
 		if diagnostics != nil && diagnostics.HasErrors() {
 			wr.WriteDiagnostics(diagnostics)
 			log.Fatal("Unrecoverable error")
@@ -97,7 +102,7 @@ func main() {
 		}
 
 		log.Info("Doing intial pattern match")
-		matched, unmatched := MatchPatternsToSolution(resources, patterns.PatternSet)
+		matched, unmatched := MatchPatternsToSolution(resources, patterns.PatternSet, typemap)
 		log.WithFields(log.Fields{
 			"matched":   len(matched),
 			"unmatched": len(unmatched),
