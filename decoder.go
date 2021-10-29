@@ -81,19 +81,33 @@ func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]h
 
 	var resources []Resource
 
-	ctx := &hcl.EvalContext{
-		Variables: map[string]cty.Value{
-			"server": cty.ObjectVal(map[string]cty.Value{
-				"ui": cty.StringVal("test"),
-			}),
-			"nas": cty.ObjectVal(map[string]cty.Value{
-				"cache": cty.StringVal("test"),
-			}),
-			"database": cty.ObjectVal(map[string]cty.Value{
-				"db": cty.StringVal("test"),
-			}),
-		},
+	variables := make(map[string][]string)
+
+	// first pass to populate the parsing context
+	for _, block := range body.Blocks.OfType("resource") {
+		resourceType := block.Labels[0]
+		resourceName := block.Labels[1]
+		_, present := variables[resourceType]
+		if present {
+			variables[resourceType] = append(variables[resourceType], resourceName)
+		} else {
+			variables[resourceType] = append(make([]string, 0), resourceName)
+		}
 	}
+
+	objectMapForEval := make(map[string]cty.Value)
+	for resource, instances := range variables {
+		variableMap := make(map[string]cty.Value)
+		for _, instance := range instances {
+			variableMap[instance] = cty.StringVal(resource + "." + instance)
+		}
+		objectMapForEval[resource] = cty.ObjectVal(variableMap)
+	}
+
+	ctx := &hcl.EvalContext{
+		Variables: objectMapForEval,
+	}
+	// second pass to get all the attributes
 	for _, block := range body.Blocks.OfType("resource") {
 		resourceType := block.Labels[0]
 
@@ -110,16 +124,6 @@ func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]h
 		}
 
 		for _, attribute := range contents.Attributes {
-			//val, _ := attribute.Expr.Value(ctx)
-			//fmt.Printf("%#v", attribute.Expr)
-
-			/*var out []string
-			diag := gohcl.DecodeExpression(attribute.Expr, ctx, &out)
-			if diag != nil && diag.HasErrors() {
-				return nil, diag
-			}*/
-			//fmt.Printf("Expression = %#v", out)
-
 			val, diag := ExpressionToValue(attribute.Expr, ctx, attribute.Name, typemap[resourceType])
 			if diag != nil && diag.HasErrors() {
 				return nil, diag
