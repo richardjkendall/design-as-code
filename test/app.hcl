@@ -1,4 +1,4 @@
-solution_name    = "Richard's test app"
+solution_name    = "Testapp"
 solution_number  = "APM00001"
 
 resource "load_balancer" "lb" {

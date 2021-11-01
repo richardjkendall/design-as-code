@@ -14,6 +14,11 @@ type Resource struct {
 	resourceAttributes map[string]interface{}
 }
 
+type Solution struct {
+	solutionName   string
+	solutionNumber string
+}
+
 func ExpressionToValue(expr hcl.Expression, ctx *hcl.EvalContext, variableName string, schema map[string]string) (interface{}, hcl.Diagnostics) {
 	log.WithFields(log.Fields{
 		"variableName": variableName,
@@ -77,9 +82,10 @@ func ExpressionToValue(expr hcl.Expression, ctx *hcl.EvalContext, variableName s
 	}
 }
 
-func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]hcl.BodySchema, typemap map[string]map[string]string) ([]Resource, hcl.Diagnostics) {
+func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]hcl.BodySchema, typemap map[string]map[string]string) ([]Resource, Solution, hcl.Diagnostics) {
 
 	var resources []Resource
+	var solution Solution
 
 	variables := make(map[string][]string)
 
@@ -120,13 +126,13 @@ func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]h
 		schema := schemas[resourceType]
 		contents, diagnostics := block.Body.Content(&schema)
 		if diagnostics != nil && diagnostics.HasErrors() {
-			return nil, diagnostics
+			return nil, solution, diagnostics
 		}
 
 		for _, attribute := range contents.Attributes {
 			val, diag := ExpressionToValue(attribute.Expr, ctx, attribute.Name, typemap[resourceType])
 			if diag != nil && diag.HasErrors() {
-				return nil, diag
+				return nil, solution, diag
 			}
 			log.WithFields(log.Fields{
 				"value": val,
@@ -140,5 +146,25 @@ func DecodeBody(body *hcl.BodyContent, resourceType string, schemas map[string]h
 		resources = append(resources, resource)
 	}
 
-	return resources, nil
+	// get top level attributes
+	for _, attribute := range body.Attributes {
+		if attribute.Name == "solution_name" {
+			log.Debug("Got solution_name attribute")
+			val, diag := attribute.Expr.Value(ctx)
+			if diag != nil && diag.HasErrors() {
+				return nil, solution, diag
+			}
+			solution.solutionName = convertValueToString(val)
+		}
+		if attribute.Name == "solution_number" {
+			log.Debug("Got solution_number attribute")
+			val, diag := attribute.Expr.Value(ctx)
+			if diag != nil && diag.HasErrors() {
+				return nil, solution, diag
+			}
+			solution.solutionNumber = convertValueToString(val)
+		}
+	}
+
+	return resources, solution, nil
 }
