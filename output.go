@@ -20,7 +20,7 @@ func MatchedPatternsToStringMap(matches []MatchedPattern, resources []Resource, 
 			resourceMap["resourceName"] = resource.resourceName
 			resourceMap["resourceType"] = resource.resourceType
 			resourceMap["patternName"] = match.Pattern.PatternName
-			resourceMap["patternTarget"] = match.Pattern.Weight
+			resourceMap["patternTarget"] = match.Pattern.Target
 			resourceMap["matchesPattern"] = true
 			attributes := make([]map[string]interface{}, 0)
 			for attributeName, attributeValue := range resource.resourceAttributes {
