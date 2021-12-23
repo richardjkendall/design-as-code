@@ -139,7 +139,7 @@ resource "aws_s3_bucket_public_access_block" "block_results_pub_access" {
 }
 
 resource "aws_athena_database" "apprepo" {
-  name   = "appreponp"
+  name   = var.database_name
   bucket = aws_s3_bucket.results_bucket.bucket
 
   encryption_configuration {
@@ -149,7 +149,7 @@ resource "aws_athena_database" "apprepo" {
 }
 
 resource "aws_athena_workgroup" "design_as_code_workgroup" {
-  name          = "design-as-code"
+  name          = var.workgroup_name
   force_destroy = true
 
   configuration {
