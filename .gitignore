@@ -1,2 +1,4 @@
 design-as-code
 *.json
+*.tfstate
+*.tfstate.backup
