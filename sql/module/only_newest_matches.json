@@ -1,0 +1,19 @@
+{
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"version","type":"varchar"},
+    {"name":"solutionname","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"resourcename","type":"varchar"},
+    {"name":"resourcetype","type":"varchar"},
+    {"name":"dependson","type":"array(varchar)"},
+    {"name":"patternname","type":"varchar"},
+    {"name":"patterntarget","type":"varchar"},
+    {"name":"matchespattern","type":"boolean"},
+    {"name":"attributes","type":"array(row(name varchar,value varchar))"},
+    {"name":"solnumber","type":"varchar"},
+    {"name":"currentver","type":"varchar"}
+  ],
+  "originalSql":"SELECT * FROM (${database_name}.matches matches INNER JOIN ${database_name}.newest_matches newest ON ((matches.version = newest.currentver) AND (matches.solutionnumber = newest.solnumber)))"
+}

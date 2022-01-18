@@ -1,0 +1,11 @@
+{
+  "originalSql":"SELECT\n  patternname\n, resourcetype\n, solutionnumber\n, count(1) total_resources\nFROM\n  ${database_name}.only_newest_matches\nWHERE (matchespattern = true)\nGROUP BY patternname, resourcetype, solutionnumber\n",
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"patternname","type":"varchar"},
+    {"name":"resourcetype","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"total_resources","type":"bigint"}
+  ]
+}

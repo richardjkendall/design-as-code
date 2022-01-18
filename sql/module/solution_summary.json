@@ -1,0 +1,13 @@
+{
+  "originalSql":"SELECT\n  solutionname\n, solutionnumber\n, 1 solution_count\n, \"count\"(1) total_resources\n, \"sum\"((CASE WHEN (matchespattern = true) THEN 1 ELSE 0 END)) total_matching\n, \"sum\"((CASE WHEN (matchespattern = true) THEN 0 ELSE 1 END)) total_not_matching\nFROM\n  ${database_name}.only_newest_matches\nGROUP BY solutionname, solutionnumber\n",
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"solutionname","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"solution_count","type":"integer"},
+    {"name":"total_resources","type":"bigint"},
+    {"name":"total_matching","type":"bigint"},
+    {"name":"total_not_matching","type":"bigint"}
+  ]
+}

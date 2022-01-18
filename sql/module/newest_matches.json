@@ -1,0 +1,9 @@
+{
+  "catalog": "awsdatacatalog",
+  "schema": "${database_name}",
+  "columns": [
+    {"name": "solnumber", "type": "varchar"},
+    {"name": "currentver", "type": "varchar"}
+  ],
+  "originalSql": "SELECT solutionnumber solnumber, max(version) currentver FROM matches GROUP BY solutionnumber"
+}

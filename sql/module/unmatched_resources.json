@@ -1,0 +1,11 @@
+{
+  "originalSql":"SELECT\n  solutionname\n, solutionnumber\n, resourcetype\n, resourcename\nFROM\n  ${database_name}.only_newest_matches\nWHERE (matchespattern = false)\n",
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"solutionname","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"resourcetype","type":"varchar"},
+    {"name":"resourcename","type":"varchar"}
+  ]
+}

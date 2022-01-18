@@ -1,0 +1,16 @@
+{
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"version","type":"varchar"},
+    {"name":"solutionname","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"resourcename","type":"varchar"},
+    {"name":"resourcetype","type":"varchar"},
+    {"name":"dependson","type":"array(varchar)"},
+    {"name":"attributes","type":"array(row(name varchar,value varchar))"},
+    {"name":"solnumber","type":"varchar"},
+    {"name":"currentver","type":"varchar"}
+  ],
+  "originalSql":"SELECT * FROM (${database_name}.resources resources INNER JOIN ${database_name}.newest_resources newest ON ((resources.version = newest.currentver) AND (resources.solutionnumber = newest.solnumber)))"
+}

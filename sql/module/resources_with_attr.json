@@ -1,0 +1,14 @@
+{"originalSql":"SELECT\n  version\n, solutionname\n, solutionnumber\n, resourcetype\n, resourcename\n, dependson\n, attr.name\n, attr.value\nFROM\n  (${database_name}.only_newest_resources\nCROSS JOIN UNNEST(attributes) t (attr))\n",
+  "catalog":"awsdatacatalog",
+  "schema":"${database_name}",
+  "columns":[
+    {"name":"version","type":"varchar"},
+    {"name":"solutionname","type":"varchar"},
+    {"name":"solutionnumber","type":"varchar"},
+    {"name":"resourcetype","type":"varchar"},
+    {"name":"resourcename","type":"varchar"},
+    {"name":"dependson","type":"array(varchar)"},
+    {"name":"name","type":"varchar"},
+    {"name":"value","type":"varchar"}
+  ]
+}
